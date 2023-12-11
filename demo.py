@@ -50,7 +50,7 @@ def main(args):
 	im = im.astype(np.float32)
 	im = resize(im, (512,512,3)) / 255.
 
-	colorarea = image.imread("colorArea.PNG")
+	colorarea = image.imread("colorarea.jpg")
 
 	outpath = args.im_path.replace('.jpg', '') + 'out.jpg'
 
@@ -109,7 +109,7 @@ def detect(im_path):
 	im = im.astype(np.float32)
 	im = resize(im, (512,512,3)) / 255.
 
-	colorarea = image.imread("colorArea.PNG")
+	colorarea = image.imread("colorarea.jpg")
 
 	outpath = im_path.replace('.jpg', '') + 'out.jpg'
 
