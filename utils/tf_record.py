@@ -2,7 +2,8 @@ import numpy as np
 
 import tensorflow as tf
 
-from scipy.misc import imread, imresize, imsave
+from skimage.transform import resize as imresize
+from skimage.io import imread, imsave
 from matplotlib import pyplot as plt
 from rgb_ind_convertor import *
 

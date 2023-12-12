@@ -18,7 +18,7 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 # input image path
 parser = argparse.ArgumentParser()
 
-parser.add_argument('--im_path', type=str, default='./demo',
+parser.add_argument('--im_path', type=str, default='./demo/demo1.jpg',
                     help='input image paths.')
 
 # color map
@@ -93,14 +93,11 @@ def main(args):
 		plt.imshow(im)
 		plt.subplot(132)
 		plt.imshow(floorplan_rgb/255.)
-
 		image.imsave(outpath, floorplan_rgb/255.)
-
-
 		plt.subplot(133)
 		plt.imshow(colorarea)
 
-		#plt.show()
+		plt.show()
 		
 
 def detect(im_path):
@@ -126,6 +123,9 @@ def detect(im_path):
 		# restore pretrained model
 		saver = tf.compat.v1.train.import_meta_graph('./pretrained/pretrained_r3d.meta')
 		saver.restore(sess, './pretrained/pretrained_r3d')
+
+		# tf.saved_model(sess, './pretrained/session_pretrained_r3d')
+		# 
 
 		# get default graph
 		graph = tf.compat.v1.get_default_graph()
@@ -156,7 +156,6 @@ def detect(im_path):
 		print(f'save floorplan {outpath}')
 		plt.subplot(133)
 		plt.imshow(colorarea)
-
 		#plt.show()
 	
 
