@@ -63,3 +63,26 @@ def refine_room_region(cw_mask, rm_ind):
 			new_rm_ind += mask*room_types[np.argmax(type_counts)]
 
 	return new_rm_ind
+
+
+def insert_global_path():
+	import os, sys
+	sys.path.insert(0, os.getcwd())
+	sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
+
+def test_tf_gpu():
+	try:
+		import tensorflow as tf
+		print(tf.config.list_physical_devices('GPU'))
+	except Exception as err:
+		print(err)
+
+def test_torch_gpu():
+	try:
+		import torch
+		print(f'torch的GPU正常嗎? {torch.cuda.is_available()}')
+	except Exception as err:
+		print(err)
+
+if __name__ == "__main__":
+	test_torch_gpu()

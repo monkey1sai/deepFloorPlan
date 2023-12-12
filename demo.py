@@ -9,8 +9,6 @@ from matplotlib import image
 from skimage.transform import resize
 from skimage.io import imread
 
-
-
 os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
@@ -44,6 +42,79 @@ def ind2rgb(ind_im, color_map=floorplan_map):
 
 	return rgb_im
 
+def tf1_to_tf2():
+	with tf.compat.v1.Session() as sess:
+		sess.run(tf.compat.v1.group(tf.compat.v1.global_variables_initializer(), tf.compat.v1.local_variables_initializer()))
+		# restore pretrained model
+		saver = tf.compat.v1.train.import_meta_graph('./pretrained/pretrained_r3d.meta')
+		saver.restore(sess, './pretrained/pretrained_r3d')
+		# get default graph
+		graph = tf.compat.v1.get_default_graph()
+		# save model as *.pb
+		tf.compat.v1.train.write_graph(graph, './pretrained/model', 'pretrained_r3d.pb', as_text=True)
+		saver.save(sess, './pretrained/model/checkpoint.ckpt')
+
+
+def wrap_frozen_graph(graph_def, inputs, outputs):
+	def _imports_graph_def():
+		tf.compat.v1.import_graph_def(graph_def, name="")
+
+	wraped_import = tf.compat.v1.wrap_function(_imports_graph_def, [])
+	import_graph = wraped_import.graph
+	return wraped_import.prune(
+		tf.nest.map_structure(import_graph.as_graph_element, inputs),
+		tf.nest.map_structure(import_graph.as_graph_element, outputs)
+
+	)
+
+def loadtf2(filepath):
+	with tf.io.gfile.GFile(filepath, 'rb') as f:	
+		graph_def = tf.compat.v1.GraphDef()
+		loaded = graph_def.ParseFromString(f.read())
+
+	frozen_func = wrap_frozen_graph(
+		graph_def= graph_def,
+		inputs="inputs:0",
+		outputs=['Cast:0', 'Cast_1:0']
+	)
+	return frozen_func
+ 
+
+def tf2Detect(im_path):
+	# load tf2 model
+	model = loadtf2('./pretrained/model/pretrained_r3d.pb')
+
+	# load image
+	im = imread(im_path)
+	im = im.astype(np.float32)
+	im = resize(im, (512,512,3)) / 255.
+	outpath = im_path.replace('.jpg', '') + 'out.jpg'
+	colorarea = image.imread("colorarea.jpg")
+
+
+	# infer results
+	[room_type, room_boundary] = model(im)
+	room_type, room_boundary = np.squeeze(room_type), np.squeeze(room_boundary)
+
+	# merge results
+	floorplan = room_type.copy()
+	floorplan[room_boundary==1] = 9
+	floorplan[room_boundary==2] = 10
+	floorplan_rgb = ind2rgb(floorplan)
+
+	# plot results
+	plt.subplot(131)
+	plt.imshow(im)
+	plt.subplot(132)
+	plt.imshow(floorplan_rgb/255.)
+	image.imsave(outpath, floorplan_rgb/255.)
+	plt.subplot(133)
+	plt.imshow(colorarea)
+
+	plt.show()
+
+
+
 def main(args):
 	# load input
 	im = imread(args.im_path)
@@ -53,8 +124,6 @@ def main(args):
 	colorarea = image.imread("colorarea.jpg")
 
 	outpath = args.im_path.replace('.jpg', '') + 'out.jpg'
-
-
 	# create tensorflow session
 	with tf.compat.v1.Session() as sess:
 		
@@ -71,6 +140,12 @@ def main(args):
 		# get default graph
 		graph = tf.compat.v1.get_default_graph()
 
+		
+		# save model as *.pb
+		tf.compat.v1.train.write_graph(graph, './pretrained/model', 'pretrained_r3d.pb', as_text=True)
+		saver.save(sess, './pretrained/model/checkpoint.ckpt')
+		
+		
 		# restore inputs & outpus tensor
 		x = graph.get_tensor_by_name('inputs:0')
 
@@ -157,17 +232,24 @@ def detect(im_path):
 		plt.subplot(133)
 		plt.imshow(colorarea)
 		#plt.show()
-	
+
+
+
 
 if __name__ == '__main__':
-	FLAGS, unparsed = parser.parse_known_args()
-	path = FLAGS.im_path
-	if os.path.isdir(path):
-		for filename in os.listdir(path):
-			if filename.count("out") > 0:
-				continue
-			if filename.endswith('.jpg') or filename.endswith('.jpeg') :
-				file_path = os.path.join(path, filename)
-				detect(file_path)
-	else:
-		main(FLAGS)
+
+	tf1_to_tf2()
+
+	#tf2Detect('./demo/1.jpg')
+	
+	# FLAGS, unparsed = parser.parse_known_args()
+	# path = FLAGS.im_path
+	# if os.path.isdir(path):
+	# 	for filename in os.listdir(path):
+	# 		if filename.count("out") > 0:
+	# 			continue
+	# 		if filename.endswith('.jpg') or filename.endswith('.jpeg') :
+	# 			file_path = os.path.join(path, filename)
+	# 			detect(file_path)
+	# else:
+	# 	main(FLAGS)
